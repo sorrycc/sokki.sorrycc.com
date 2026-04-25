@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Sokki — Type less. Say more.</title>
+  <meta name="description" content="A native macOS menu bar text expander. Type a trigger like :email and Sokki replaces it. macOS 14+, Apple Silicon." />
+  <meta name="theme-color" content="#faf9f6" />
+  <link rel="canonical" href="https://sokki.sorrycc.com/" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="root"></div>
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin="anonymous"></script>
+
+  <script>
+    window.SOKKI_TWEAKS = {
+      "accent": "#c8442a",
+      "density": "default",
+      "showStageGrid": true,
+      "showSparkles": true
+    };
+
+    function applySokkiTweaks(t) {
+      const r = document.documentElement;
+      r.style.setProperty("--accent", t.accent);
+      document.body.classList.remove("density-compact", "density-airy");
+      if (t.density === "compact") document.body.classList.add("density-compact");
+      if (t.density === "airy") document.body.classList.add("density-airy");
+      document.body.dataset.stageGrid = t.showStageGrid ? "on" : "off";
+      document.body.dataset.sparkles = t.showSparkles ? "on" : "off";
+    }
+    document.addEventListener("DOMContentLoaded", () => applySokkiTweaks(window.SOKKI_TWEAKS));
+  </script>
+
+  <script src="i18n.js"></script>
+  <script type="text/babel" src="app.jsx"></script>
+</body>
+</html>
