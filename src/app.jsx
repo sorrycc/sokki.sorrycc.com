@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { SOKKI_I18N } from './i18n.js';
 
 const STORAGE_LANG = "sokki.lang";
+const STORAGE_DEMO = "sokki.demo";
+const BUILD_DATE = "2026-04-22";
 
 function detectInitialLang() {
   try {
@@ -13,119 +15,261 @@ function detectInitialLang() {
   return "en";
 }
 
-/* ---------- Hero ---------- */
+/* ---------- Slow, captioned product mockup ----------
+   Phases (slowed 1.5x and now ~9s w/ pauses + captions):
+     0  idle / blank
+     1  typing  ":da"  (caption: "you type")
+     2  filtering      (caption: "Sokki filters")
+     3  Tab pressed    (caption: "Tab to expand")
+     4  expanded       (caption: "expanded :daily")
+     5  pause then loop
+*/
+function ProductMockup({ lang, t }) {
+  const [phase, setPhase] = useState(0);
+  const [typed, setTyped] = useState("");
 
-function Sparkles() {
-  const dots = useMemo(() => {
-    const arr = [];
-    for (let i = 0; i < 14; i++) {
-      const delay = (i * 0.22) % 3.2;
-      const cls = i % 3 === 0 ? "s2" : i % 5 === 0 ? "s3" : "";
-      const top = 50 + (Math.sin(i) * 22);
-      const left = 50 + (Math.cos(i * 1.3) * 8);
-      arr.push({ delay, cls, top, left });
-    }
-    return arr;
+  useEffect(() => {
+    let timers = [];
+    const run = () => {
+      timers.forEach(clearTimeout);
+      timers = [];
+      setPhase(0);
+      setTyped("");
+      timers.push(setTimeout(() => { setTyped(":"); setPhase(1); }, 900));
+      timers.push(setTimeout(() => setTyped(":d"), 1200));
+      timers.push(setTimeout(() => setTyped(":da"), 1500));
+      timers.push(setTimeout(() => setPhase(2), 2200));
+      timers.push(setTimeout(() => setPhase(3), 3800));
+      timers.push(setTimeout(() => setPhase(4), 4200));
+      timers.push(setTimeout(run, 9000));
+    };
+    run();
+    return () => timers.forEach(clearTimeout);
   }, []);
+
+  const ALL_ROWS = [
+    { trig: ":daily",  prev: "## Daily 2026-04-25 · Yesterday: …" },
+    { trig: ":dash",   prev: "—" },
+    { trig: ":date",   prev: "2026-04-25" },
+    { trig: ":daikon", prev: "translate to Japanese", ai: true },
+    { trig: ":email",  prev: "sorrycc@gmail.com" },
+    { trig: ":sig",    prev: "— Chen Cheng" },
+  ];
+  const filtered = phase >= 2
+    ? ALL_ROWS.filter(r => r.trig.startsWith(":da")).slice(0, 4)
+    : ALL_ROWS.slice(0, 4);
+
+  const showExpanded = phase >= 4;
+
+  const captions = t.hero.captions || {};
+  const captionText = phase === 0 ? captions.idle
+    : phase === 1 ? captions.typing
+    : phase === 2 ? captions.filter
+    : phase === 3 ? captions.tab
+    : captions.expanded;
+
   return (
-    <div className="sparkles" aria-hidden="true">
-      {dots.map((d, i) => (
-        <span
-          key={i}
-          className={`sparkle ${d.cls}`}
-          style={{
-            top: `${d.top}%`,
-            left: `${d.left}%`,
-            animationDelay: `${d.delay}s`,
-          }}
-        />
-      ))}
+    <div className="mockup-stack">
+      <div className="menubar" aria-hidden="true">
+        <span className="mb-apple"></span>
+        <span className="mb-app">Mail</span>
+        <span className="mb-item">File</span>
+        <span className="mb-item">Edit</span>
+        <span className="mb-spacer"></span>
+        <span className="mb-tray">
+          <span className="mb-tray-icon mb-su">速</span>
+          <span className="mb-tray-icon">⌘</span>
+          <span className="mb-time">10:24</span>
+        </span>
+      </div>
+
+      <div className="mockup" aria-hidden="true">
+        <div className="mp-search">
+          <span className="mp-prompt">›</span>
+          <span className="mp-query">{typed || " "}</span>
+          {!showExpanded && <span className="mp-caret"></span>}
+        </div>
+
+        {!showExpanded ? (
+          <ul className="mp-list">
+            {filtered.map((r, i) => (
+              <li key={r.trig}
+                  className={`mp-row ${i === 0 ? "mp-sel" : ""} ${phase === 3 && i === 0 ? "mp-tabhit" : ""}`}>
+                <span className="mp-trig">{r.trig}</span>
+                <span className="mp-prev">
+                  {r.ai && <span className="mp-ai">AI</span>}
+                  {r.prev}
+                </span>
+                {i === 0 && <span className="mp-kbd">⇥</span>}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <div className="mp-expanded">
+            <div className="mp-exp-label">{lang === "zh" ? "已展开 :daily" : "Expanded :daily"}</div>
+            <pre>{`## Daily 2026-04-25
+Yesterday: shipped v0.0.13
+Today:
+Blockers:`}</pre>
+          </div>
+        )}
+
+        <div className="mp-foot">
+          <span className="mp-count">
+            {phase >= 2
+              ? (lang === "zh" ? "4 / 24 匹配" : "4 of 24 matches")
+              : (lang === "zh" ? "24 个 snippet" : "24 snippets loaded")}
+          </span>
+          <span className="mp-kbd-strip">
+            <b>↑↓</b> · <b>⇥</b> · <b>↵</b>
+          </span>
+        </div>
+      </div>
+
+      <div className="mockup-caption" key={phase}>
+        <span className="mc-dot"></span>
+        <span className="mc-text">{captionText}</span>
+        <span className="mc-phase">{phase === 0 ? "—" : `${phase}/4`}</span>
+      </div>
     </div>
   );
 }
 
-/* Live demo input — type :email and watch it expand */
+/* ---------- Live demo ---------- */
 
 const SNIPPETS = {
   ":email": "sorrycc@gmail.com",
   ":sig": "— Chen Cheng / sorrycc",
-  ":now": () => new Date().toISOString().slice(0, 16).replace("T", " "),
+  ":now": new Date().toISOString().slice(0, 16).replace("T", " "),
   ":addr": "1 Infinite Loop, Cupertino, CA",
   ":shrug": "¯\\_(ツ)_/¯",
   ":dash": "—",
   ":arrow": "→",
   ":tm": "™",
 };
-const resolveSnippet = (trig) => {
-  const v = SNIPPETS[trig];
-  return typeof v === 'function' ? v() : v;
-};
 
-function LiveDemo({ t }) {
-  const [val, setVal] = useState("");
+function LiveDemo({ t, externalFill }) {
+  const [val, setVal] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_DEMO);
+      if (saved) return saved;
+    } catch (e) {}
+    return t.try_prefill || "";
+  });
   const [pulse, setPulse] = useState(0);
+  const [flash, setFlash] = useState(null);
   const taRef = useRef(null);
 
-  // Build a regex that matches any known trigger
+  useEffect(() => {
+    try { localStorage.setItem(STORAGE_DEMO, val); } catch (e) {}
+  }, [val]);
+
   const triggerRe = useMemo(() => {
     const keys = Object.keys(SNIPPETS)
       .map(k => k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
-      .sort((a, b) => b.length - a.length); // longest first
+      .sort((a, b) => b.length - a.length);
     return new RegExp("(" + keys.join("|") + ")", "g");
   }, []);
 
-  const handleChange = (e) => {
-    const el = e.target;
-    const raw = el.value;
-    const cursor = el.selectionStart;
+  const triggerFlash = (text) => {
+    setFlash({ text, key: Date.now() });
+    setTimeout(() => setFlash(null), 900);
+  };
 
-    // Look at text up to cursor for any trigger that just completed
+  const expandFromValue = useCallback((raw, cursor) => {
     const before = raw.slice(0, cursor);
     const after = raw.slice(cursor);
-
-    // Find last trigger occurrence in `before`
     let lastMatch = null;
     let m;
     triggerRe.lastIndex = 0;
     while ((m = triggerRe.exec(before)) !== null) {
       lastMatch = { trig: m[0], start: m.index, end: m.index + m[0].length };
     }
-
     if (lastMatch && lastMatch.end === before.length) {
-      // Don't expand if this trigger is a prefix of a longer trigger
-      // (e.g. :em is a prefix of :email — wait until user disambiguates)
       const isPrefixOfLonger = Object.keys(SNIPPETS).some(
         k => k !== lastMatch.trig && k.startsWith(lastMatch.trig)
       );
       if (!isPrefixOfLonger) {
-        const replacement = resolveSnippet(lastMatch.trig);
+        const replacement = SNIPPETS[lastMatch.trig];
         const newBefore = before.slice(0, lastMatch.start) + replacement;
         const next = newBefore + after;
         setVal(next);
         setPulse(p => p + 1);
+        triggerFlash(replacement);
         requestAnimationFrame(() => {
           if (taRef.current) {
             const pos = newBefore.length;
             taRef.current.setSelectionRange(pos, pos);
+            taRef.current.focus();
           }
         });
-        return;
+        return true;
       }
     }
+    return false;
+  }, [triggerRe]);
 
-    setVal(raw);
+  const handleChange = (e) => {
+    const raw = e.target.value;
+    const cursor = e.target.selectionStart;
+    if (!expandFromValue(raw, cursor)) setVal(raw);
+  };
+
+  useEffect(() => {
+    if (!externalFill) return;
+    const { trig } = externalFill;
+    const start = val.length === 0 || /\s$/.test(val) ? val : val + " ";
+    let i = 0;
+    const ta = taRef.current;
+    if (ta) ta.focus();
+    const tick = () => {
+      i++;
+      const next = start + trig.slice(0, i);
+      setVal(next);
+      if (i < trig.length) {
+        setTimeout(tick, 55);
+      } else {
+        const ok = expandFromValue(next, next.length);
+        if (!ok) {
+          const replacement = SNIPPETS[trig];
+          const newVal = start + replacement;
+          setVal(newVal);
+          setPulse(p => p + 1);
+          triggerFlash(replacement);
+          requestAnimationFrame(() => {
+            if (taRef.current) {
+              taRef.current.setSelectionRange(newVal.length, newVal.length);
+              taRef.current.focus();
+            }
+          });
+        }
+      }
+    };
+    setVal(start);
+    setTimeout(tick, 80);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [externalFill?.key]);
+
+  const clear = () => {
+    setVal("");
+    if (taRef.current) taRef.current.focus();
   };
 
   return (
     <div className={`demo ${pulse ? "demo-pulse" : ""}`} key={pulse}>
       <div className="demo-label">
         <span className="dots"><i/><i/><i/></span>
-        <span>{t.try_label}</span>
+        <span className="demo-fname">{t.try_label}</span>
+        <span className="demo-status">
+          {flash ? (
+            <span className="demo-flash">↳ {t.flash_label}</span>
+          ) : null}
+        </span>
       </div>
       <textarea
         ref={taRef}
         className="demo-input"
-        rows={3}
+        rows={4}
         placeholder={t.try_placeholder}
         value={val}
         spellCheck={false}
@@ -134,83 +278,41 @@ function LiveDemo({ t }) {
       />
       <div className="demo-bar">
         <span>{t.try_hint}</span>
-        <span className="kbd">
-          <b>:email</b>
-        </span>
+        {val ? (
+          <button className="demo-clear" onClick={clear}>clear</button>
+        ) : null}
       </div>
     </div>
   );
 }
 
-/* ---------- Trigger chips ---------- */
-
-function TriggerChips({ t, onCopy }) {
+function TriggerChips({ t, onPick, label }) {
   const triggers = [":email", ":sig", ":now", ":addr", ":shrug", ":dash", ":arrow", ":tm"];
-  const [copied, setCopied] = useState(null);
-  const handle = async (trig) => {
-    try {
-      await navigator.clipboard.writeText(trig);
-    } catch (e) {}
-    setCopied(trig);
-    onCopy(trig);
-    setTimeout(() => setCopied(null), 900);
+  const [active, setActive] = useState(null);
+  const handle = (trig) => {
+    setActive(trig);
+    onPick(trig);
+    setTimeout(() => setActive(null), 600);
   };
   return (
-    <section className="triggers shell">
-      <p className="eyebrow">{t.triggers.eyebrow}</p>
+    <div className="chip-row">
+      <span className="chip-label">{label}</span>
       <ul className="chips">
         {triggers.map((trig) => (
           <li key={trig}>
             <button
               type="button"
-              className={copied === trig ? "copied" : ""}
+              className={active === trig ? "copied" : ""}
               onClick={() => handle(trig)}
             >
-              {copied === trig ? "✓ copied" : trig}
+              {trig}
             </button>
           </li>
         ))}
       </ul>
-    </section>
+    </div>
   );
 }
-
-/* ---------- Step pre rendering with caret in step 02 ---------- */
-
-function StepCode({ code, idx }) {
-  if (idx === 1) {
-    // step 2: render with blinking caret
-    const parts = code.split("|");
-    return (
-      <pre>
-        <span>{parts[0]}</span>
-        <span className="caret" />
-        <span>{parts[1] || ""}</span>
-      </pre>
-    );
-  }
-  if (idx === 0) {
-    // highlight ":email" and the email
-    const re = /(":email")|("sorrycc@gmail\.com")/g;
-    const segs = [];
-    let last = 0;
-    let m;
-    while ((m = re.exec(code)) !== null) {
-      if (m.index > last) segs.push({ t: code.slice(last, m.index) });
-      segs.push({ t: m[0], a: true });
-      last = m.index + m[0].length;
-    }
-    if (last < code.length) segs.push({ t: code.slice(last) });
-    return (
-      <pre>
-        {segs.map((s, i) => s.a ? <span key={i} className="accent">{s.t}</span> : <span key={i}>{s.t}</span>)}
-      </pre>
-    );
-  }
-  return <pre>{code}</pre>;
-}
-
-/* ---------- Reveal on scroll ---------- */
 
 function useReveal() {
   useEffect(() => {
@@ -232,17 +334,87 @@ function useReveal() {
   }, []);
 }
 
-/* ---------- Toast ---------- */
-
-function useToast() {
-  const [msg, setMsg] = useState("");
-  const timer = useRef(null);
-  const show = useCallback((m) => {
-    setMsg(m);
-    if (timer.current) clearTimeout(timer.current);
-    timer.current = setTimeout(() => setMsg(""), 1600);
+function useScrolled() {
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 480);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
   }, []);
-  return { msg, show };
+  return scrolled;
+}
+
+/* ---------- YAML highlighter w/ optional annotations ---------- */
+
+function YamlBlock({ code, annotations }) {
+  const lines = code.split("\n");
+  const annoMap = {};
+  if (annotations) annotations.forEach(a => { annoMap[a.line] = a; });
+
+  return (
+    <pre className="yaml">
+      {lines.map((line, i) => {
+        const lineNo = i + 1;
+        const cm = line.match(/^(\s*)(#.*)$/);
+        let body;
+        if (cm) {
+          body = <>{cm[1]}<span className="y-cmt">{cm[2]}</span></>;
+        } else {
+          let parts = line;
+          const out = [];
+          const km = parts.match(/^(\s*-?\s*)([A-Za-z_]+)(:)/);
+          if (km) {
+            out.push(<span key="lead">{km[1]}</span>);
+            out.push(<span key="key" className="y-key">{km[2]}</span>);
+            out.push(<span key="col">{km[3]}</span>);
+            parts = parts.slice(km[0].length);
+          }
+          const strRe = /"([^"]*)"/g;
+          let last = 0; let m2; let idx = 0;
+          while ((m2 = strRe.exec(parts)) !== null) {
+            if (m2.index > last) out.push(<span key={`t${idx}`}>{parts.slice(last, m2.index)}</span>);
+            out.push(<span key={`s${idx}`} className="y-str">"{m2[1]}"</span>);
+            last = m2.index + m2[0].length;
+            idx++;
+          }
+          if (last < parts.length) {
+            const tail = parts.slice(last);
+            const varRe = /\{\{[^}]+\}\}/g;
+            let l2 = 0; let m3; let j = 0;
+            while ((m3 = varRe.exec(tail)) !== null) {
+              if (m3.index > l2) out.push(<span key={`p${idx}-${j}`}>{tail.slice(l2, m3.index)}</span>);
+              out.push(<span key={`v${idx}-${j}`} className="y-var">{m3[0]}</span>);
+              l2 = m3.index + m3[0].length;
+              j++;
+            }
+            if (l2 < tail.length) out.push(<span key={`f${idx}`}>{tail.slice(l2)}</span>);
+          }
+          body = out.length ? out : (line || " ");
+        }
+        const anno = annoMap[lineNo];
+        return (
+          <div className={`yl ${anno ? "yl-anno" : ""} ${anno ? `yl-${anno.side}` : ""}`} key={i}>
+            {body}
+            {anno && <span className="yl-pin">{anno.label}</span>}
+          </div>
+        );
+      })}
+    </pre>
+  );
+}
+
+/* ---------- Compact starter card (no chrome) ---------- */
+function StarterCard({ s }) {
+  return (
+    <article className="starter">
+      <header>
+        <code className="starter-trig">{s.trig}</code>
+        <span className="starter-desc">{s.desc}</span>
+      </header>
+      <YamlBlock code={s.code} />
+    </article>
+  );
 }
 
 /* ---------- App ---------- */
@@ -250,12 +422,14 @@ function useToast() {
 function App() {
   const [lang, setLang] = useState(detectInitialLang);
   const t = SOKKI_I18N[lang];
-  const toast = useToast();
+  const scrolled = useScrolled();
+  const [demoFill, setDemoFill] = useState(null);
+  const demoRef = useRef(null);
 
   useEffect(() => {
     document.documentElement.lang = t.htmlLang;
     document.title = lang === "zh"
-      ? "Sokki — 少敲键,多说话。"
+      ? "Sokki — 少敲键，多说话。"
       : "Sokki — Type less. Say more.";
     try { localStorage.setItem(STORAGE_LANG, lang); } catch (e) {}
   }, [lang, t]);
@@ -264,29 +438,29 @@ function App() {
 
   const toggle = () => setLang((l) => l === "en" ? "zh" : "en");
 
-  // headline pieces — use serif italic for english; for zh use plain
-  const Headline = () => (
-    <h1>
-      <span className="a">{t.hero.headline_a}</span>
-      <span className="b">{t.hero.headline_b}</span>
-    </h1>
-  );
+  const pickTrigger = (trig) => {
+    setDemoFill({ trig, key: Date.now() });
+    if (demoRef.current) {
+      demoRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  };
 
   return (
     <>
-      <header className="topbar">
+      <header className={`topbar ${scrolled ? "scrolled" : ""}`}>
         <div className="shell topbar-inner">
           <a href="#top" className="brand" aria-label="Sokki home">
-            <span className="stamp">速</span>
-            <span className="name">Sokki</span>
-            <span className="name-zh">/ 速記</span>
+            <span className="brand-mark">Sokki</span>
+            <span className="brand-zh">速記</span>
           </a>
           <nav className="nav">
-            <a href="#features">{t.nav.features}</a>
             <a href="#workflow">{t.nav.workflow}</a>
-            <a href="#uses">{t.nav.uses}</a>
             <a href="#faq">{t.nav.faq}</a>
-            <a href="https://github.com/sorrycc/Sokki">{t.nav.github}</a>
+            <a href="https://github.com/sorrycc/Sokki" className="nav-gh">{t.nav.github}</a>
+            <a
+              href="https://download.sorrycc.dev/sokki/Sokki-latest.dmg"
+              className={`nav-dl ${scrolled ? "show" : ""}`}
+            >↓ {t.nav.download}</a>
             <button
               className="lang-toggle"
               onClick={toggle}
@@ -299,99 +473,202 @@ function App() {
 
       <main id="top">
         {/* Hero */}
-        <section className="hero shell">
-          <p className="kicker">{t.hero.kicker}</p>
-          <Headline />
-          <p className="lede">
-            {t.hero.lede}
-            <code className="trigger-inline">:email</code>
-            {t.hero.lede_after}
-          </p>
-          <div className="cta-row">
-            <a className="btn btn-primary" href="https://download.sorrycc.dev/sokki/Sokki-latest.dmg">
-              ↓ {t.hero.cta_primary}
-            </a>
-            <a className="btn btn-ghost" href="https://github.com/sorrycc/Sokki">
-              {t.hero.cta_secondary} →
-            </a>
-          </div>
-          <p className="meta">{t.hero.meta}</p>
-
-          {/* Stage with keycap + live demo */}
-          <div className="stage stage-grid">
-            <div className="stage-inner">
-              <div className="keycap-wrap">
-                <div className="keycap"><span className="glyph">速</span></div>
-                <Sparkles />
+        <section className="hero shell-wide">
+          <div className="hero-grid">
+            <div className="hero-text">
+              <p className="kicker">{t.hero.kicker}</p>
+              <h1>
+                <span className="a">{t.hero.headline_a}</span>
+                <span className="b">{t.hero.headline_b}</span>
+              </h1>
+              <p className="lede">
+                {t.hero.lede}
+                <code className="trigger-inline">:email</code>
+                {t.hero.lede_after}
+              </p>
+              <div className="cta-row">
+                <a className="btn btn-primary" href="https://download.sorrycc.dev/sokki/Sokki-latest.dmg">
+                  ↓ {t.hero.cta_primary}
+                </a>
+                <a className="textlink" href="https://github.com/sorrycc/Sokki">
+                  {t.hero.cta_secondary} →
+                </a>
               </div>
-              <LiveDemo t={t.hero} />
+              <p className="meta">{t.hero.meta}</p>
             </div>
+            <figure className="hero-figure">
+              <ProductMockup lang={lang} t={t} />
+            </figure>
           </div>
         </section>
 
-        {/* Trigger chips */}
-        <TriggerChips t={t} onCopy={(trig) => toast.show(`${trig} → ${resolveSnippet(trig) || ""}`)} />
+        {/* Social proof */}
+        <section className="proof shell-wide reveal">
+          <p className="eyebrow">{t.proof.eyebrow}</p>
 
-        {/* Intro */}
-        <section className="intro shell reveal">
-          <p>
-            <span className="drop">{lang === "zh" ? "速" : "S"}</span>
-            {t.intro.body}
-          </p>
+          <div className="proof-hero">
+            <div className="ph-num">{t.proof.hero_stat.n}</div>
+            <p className="ph-label">{t.proof.hero_stat.l}</p>
+          </div>
+
+          <div className="proof-stats">
+            {t.proof.stats.map((s, i) => (
+              <div className="ps" key={i}>
+                <div className="ps-n">{s.n}</div>
+                <div className="ps-l">{s.l}</div>
+              </div>
+            ))}
+          </div>
+          <div className="proof-quotes">
+            {t.proof.quotes.map((q, i) => (
+              <figure key={i}>
+                <blockquote>“{q.q}”</blockquote>
+                <figcaption>
+                  <span className="qa">{q.a}</span>
+                  <span className="qr">{q.role}</span>
+                </figcaption>
+              </figure>
+            ))}
+          </div>
+        </section>
+
+        {/* Demo */}
+        <section id="demo" className="demo-section shell reveal" ref={demoRef}>
+          <p className="eyebrow">{t.demo.eyebrow}</p>
+          <h2>{t.demo.title}</h2>
+          <p className="sub">{t.demo.sub}</p>
+          <LiveDemo t={t.demo} externalFill={demoFill} />
+          <TriggerChips t={t} onPick={pickTrigger} label={t.demo.chips_label} />
+        </section>
+
+        {/* Intro w/ proper drop cap */}
+        <section className="intro reveal">
+          <div className="shell intro-grid">
+            <p className="eyebrow">{t.intro.eyebrow}</p>
+            <p className="intro-body">
+              <span className="dropcap" aria-hidden="true">{t.intro.drop}</span>
+              {t.intro.body}
+            </p>
+          </div>
         </section>
 
         {/* Features */}
         <section id="features" className="section shell reveal">
-          <p className="eyebrow">{t.features.title.length > 0 ? "01 / " + (lang === "zh" ? "功能" : "Features") : ""}</p>
+          <p className="eyebrow">01 / {lang === "zh" ? "功能" : "Features"}</p>
           <h2>{t.features.title}</h2>
           <p className="sub">{t.features.subtitle}</p>
-          <ul className="feat-grid">
-            {t.features.items.map((f) => (
-              <li key={f.k}>
-                <p className="num">{f.k}</p>
+
+          <div className="feat-hero feat-hero-light">
+            {t.features.hero_items.map((f) => (
+              <article className="fh fh-light" key={f.k}>
+                <p className="fh-num">{f.k}</p>
                 <h3>{f.h}</h3>
-                <p dangerouslySetInnerHTML={{ __html: renderInlineCode(f.p) }} />
+                <p>{f.p}</p>
+                {f.chip_a ? (
+                  <div className="fh-flow">
+                    <span className="fhf-pill fhf-trig">{f.chip_a}</span>
+                    <span className="fhf-arrow">⟶</span>
+                    <span className="fhf-pill fhf-claude">{f.chip_b}</span>
+                    <span className="fhf-arrow">⟶</span>
+                    <span className="fhf-pill fhf-done">{f.chip_c}</span>
+                  </div>
+                ) : (
+                  <pre className="fh-yamlmini">
+                    {f.ll.map((l, i) => (
+                      <div className="yl" key={i}>{l}</div>
+                    ))}
+                  </pre>
+                )}
+              </article>
+            ))}
+          </div>
+
+          <ul className="feat-grid">
+            {t.features.list.map((it, i) => (
+              <li key={i}>
+                <strong>{it.h}</strong>
+                <p>{it.p}</p>
+              </li>
+            ))}
+          </ul>
+
+          <div className="compare">
+            <p className="compare-label">{t.features.compare.label}</p>
+            <ul>
+              {t.features.compare.items.map((c, i) => (
+                <li key={i}>
+                  <span className="cmp-name">vs. {c.name}</span>
+                  <span className="cmp-p">{c.p}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+
+        {/* Workflow — YAML-FIRST, no step boxes */}
+        <section id="workflow" className="section section-tinted shell-wide reveal">
+          <div className="shell">
+            <p className="eyebrow">02 / {t.workflow.eyebrow}</p>
+            <h2>{t.workflow.title}</h2>
+            <p className="sub">{t.workflow.sub}</p>
+          </div>
+          <div className="yaml-break">
+            <div className="yaml-wrap">
+              <div className="yaml-head">
+                <span className="yh-dots"><i/><i/><i/></span>
+                <span className="yh-name">~/.sokki/snippets.yaml</span>
+                <span className="yh-meta">— {t.workflow.yaml_caption}</span>
+              </div>
+              <YamlBlock code={t.workflow.yaml} annotations={t.workflow.annotations} />
+            </div>
+          </div>
+        </section>
+
+        {/* Mid-page CTA */}
+        <section className="midcta reveal">
+          <div className="shell midcta-inner">
+            <div>
+              <p className="eyebrow">{t.midcta.eyebrow}</p>
+              <h3>{t.midcta.title}</h3>
+            </div>
+            <div className="midcta-actions">
+              <a className="btn btn-primary" href="https://download.sorrycc.dev/sokki/Sokki-latest.dmg">
+                ↓ {t.midcta.cta}
+              </a>
+              <p className="meta">{t.midcta.meta}</p>
+            </div>
+          </div>
+        </section>
+
+        {/* Positioning */}
+        <section id="not" className="section shell reveal">
+          <p className="eyebrow">03 / {t.not.eyebrow}</p>
+          <h2>{t.not.title_pos}</h2>
+          <p className="sub">{t.not.sub_pos}</p>
+          <ul className="not-list">
+            {t.not.items.map((it, i) => (
+              <li key={i}>
+                <span className="not-x" aria-hidden="true">×</span>
+                <h3>{it.h}</h3>
+                <p>{it.p}</p>
               </li>
             ))}
           </ul>
         </section>
 
-        {/* Workflow */}
-        <section id="workflow" className="section shell reveal">
-          <p className="eyebrow">02 / {t.workflow.eyebrow}</p>
-          <h2>{t.workflow.title}</h2>
-          <div className="flow">
-            {t.workflow.steps.map((s, i) => (
-              <div className="step" key={i}>
-                <div className="n">{s.n}</div>
-                <div>
-                  <h3>{s.h}</h3>
-                  <p>{s.p}</p>
-                  <StepCode code={s.code} idx={i} />
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* Use cases */}
-        <section id="uses" className="section shell reveal">
-          <p className="eyebrow">03 / {t.uses.eyebrow}</p>
+        {/* First five triggers */}
+        <section id="uses" className="section section-tinted shell reveal">
+          <p className="eyebrow">04 / {t.uses.eyebrow}</p>
           <h2>{t.uses.title}</h2>
-          <div className="uses-grid">
-            {t.uses.items.map((u, i) => (
-              <article key={i}>
-                <span className="tag">{u.tag}</span>
-                <h3>{u.h}</h3>
-                <p>{u.p}</p>
-              </article>
-            ))}
+          <p className="sub">{t.uses.sub}</p>
+          <div className="starter-list starter-list-recipe">
+            {t.uses.starter.map((s) => <StarterCard key={s.trig} s={s} />)}
           </div>
         </section>
 
         {/* FAQ */}
         <section id="faq" className="section shell reveal">
-          <p className="eyebrow">04 / FAQ</p>
+          <p className="eyebrow">05 / FAQ</p>
           <h2>{t.faq.title}</h2>
           <div className="faq-list">
             {t.faq.items.map((f, i) => (
@@ -403,40 +680,66 @@ function App() {
           </div>
         </section>
 
-        {/* Final CTA */}
-        <section className="cta-final shell reveal">
-          <h2>{t.cta.title}</h2>
-          <p className="sub">{t.cta.sub}</p>
-          <div className="cta-row" style={{ justifyContent: "center" }}>
-            <a className="btn btn-primary" href="https://download.sorrycc.dev/sokki/Sokki-latest.dmg">
-              ↓ {t.hero.cta_primary}
-            </a>
+        {/* Final CTA — DARK, FILLED with mockup loop + install one-liner */}
+        <section className="cta-final reveal">
+          <div className="shell cta-final-inner">
+            <div className="cta-left">
+              <h2>{t.cta.title}</h2>
+              <p className="sub">{t.cta.sub}</p>
+              <div className="cta-row">
+                <a className="btn btn-inverse" href="https://download.sorrycc.dev/sokki/Sokki-latest.dmg">
+                  ↓ {t.cta.cta_primary}
+                </a>
+              </div>
+              <p className="cta-or">{t.cta.install}</p>
+              <pre className="cta-cmd">{t.cta.install_cmd}</pre>
+              <p className="meta">{t.cta.meta}</p>
+              <p className="cta-ps">{t.cta.ps}</p>
+            </div>
+            <div className="cta-right">
+              <div className="cta-mockup-frame">
+                <ProductMockup lang={lang} t={t} />
+              </div>
+            </div>
           </div>
-          <p className="meta">{t.cta.meta}</p>
         </section>
       </main>
 
-      <footer className="shell">
-        <p>
-          <span className="stamp-mark">速</span>
-          {t.footer.a}
-          <a href="https://x.com/chenchengpro" target="_blank" rel="noopener">{t.footer.author}</a>
-          {t.footer.b}
-        </p>
-        <p>
-          v0.0.13 · <a href="https://github.com/sorrycc/Sokki">GitHub</a> · <a href="#faq">{t.footer.privacy}</a>
-        </p>
+      <footer>
+        <div className="shell footer-grid">
+          <div className="f-col f-col-main">
+            <p className="f-built">
+              {t.footer.built_by} <a href="https://x.com/chenchengpro" target="_blank" rel="noopener">{t.footer.author}</a>.
+            </p>
+            <p className="f-line">{t.footer.compiled}</p>
+            <p className="f-line">{t.footer.since}</p>
+          </div>
+          <div className="f-col">
+            <p className="f-h">{t.footer.colophon_label}</p>
+            {t.footer.colophon_lines.map((l, i) => (
+              <p className="f-line" key={i}>{l}</p>
+            ))}
+          </div>
+          <div className="f-col">
+            <p className="f-h">{t.footer.links_label}</p>
+            {t.footer.links.map((lk, i) => (
+              <p className="f-line" key={i}><a href={lk.href}>{lk.label}</a></p>
+            ))}
+          </div>
+        </div>
+        <div className="shell footer-curse">
+          <p>— {t.footer.curse}</p>
+        </div>
+        <div className="shell footer-foot">
+          <span>{t.footer.build}</span>
+          <span className="f-stamp">速</span>
+        </div>
       </footer>
-
-      <div className={`toast ${toast.msg ? "on" : ""}`} role="status" aria-live="polite">
-        {toast.msg || ""}
-      </div>
     </>
   );
 }
 
 function renderInlineCode(s) {
-  // Wrap {{...}}, :word, and known fenced bits in <code>
   let out = String(s).replace(/\{\{[^}]+\}\}/g, (m) => `<code>${escapeHtml(m)}</code>`);
   out = out.replace(/(^|[\s,(])(:[a-zA-Z]+)/g, (_, pre, m) => `${pre}<code>${escapeHtml(m)}</code>`);
   out = out.replace(/(telemetry\.sorrycc\.dev)/g, "<code>$1</code>");

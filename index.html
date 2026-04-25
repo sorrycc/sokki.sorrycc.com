@@ -7,30 +7,52 @@
   <meta name="description" content="A native macOS menu bar text expander. Type a trigger like :email and Sokki replaces it. macOS 14+, Apple Silicon." />
   <meta name="theme-color" content="#faf9f6" />
   <link rel="canonical" href="https://sokki.sorrycc.com/" />
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://sokki.sorrycc.com/" />
+  <meta property="og:title" content="Sokki — Type less. Say more." />
+  <meta property="og:description" content="Native macOS text expander. Type a trigger like :email and Sokki replaces it — system-wide, in any app." />
+  <meta property="og:image" content="https://pic.sorrycc.com/proxy/1777115488971-654038441.png" />
+  <meta property="og:image:alt" content="Sokki — a native macOS text expander" />
+  <meta property="og:site_name" content="Sokki" />
+
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Sokki — Type less. Say more." />
+  <meta name="twitter:description" content="Native macOS text expander. Type a trigger like :email and Sokki replaces it — system-wide, in any app." />
+  <meta name="twitter:image" content="https://pic.sorrycc.com/proxy/1777115488971-654038441.png" />
+  <meta name="twitter:creator" content="@chenchengpro" />
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Sokki",
+    "alternateName": "速記",
+    "description": "A native macOS menu bar text expander. Type a trigger like :email and Sokki replaces it — system-wide, in any app.",
+    "url": "https://sokki.sorrycc.com/",
+    "image": "https://pic.sorrycc.com/proxy/1777115488971-654038441.png",
+    "applicationCategory": "UtilitiesApplication",
+    "operatingSystem": "macOS 14",
+    "downloadUrl": "https://download.sorrycc.dev/sokki/Sokki-latest.dmg",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "author": {
+      "@type": "Person",
+      "name": "Chen Cheng",
+      "url": "https://sorrycc.com"
+    }
+  }
+  </script>
 </head>
 <body>
   <div id="root"></div>
-
-  <script>
-    window.SOKKI_TWEAKS = {
-      "accent": "#c8442a",
-      "density": "default",
-      "showStageGrid": true,
-      "showSparkles": true
-    };
-
-    function applySokkiTweaks(t) {
-      const r = document.documentElement;
-      r.style.setProperty("--accent", t.accent);
-      document.body.classList.remove("density-compact", "density-airy");
-      if (t.density === "compact") document.body.classList.add("density-compact");
-      if (t.density === "airy") document.body.classList.add("density-airy");
-      document.body.dataset.stageGrid = t.showStageGrid ? "on" : "off";
-      document.body.dataset.sparkles = t.showSparkles ? "on" : "off";
-    }
-    applySokkiTweaks(window.SOKKI_TWEAKS);
-  </script>
-
   <script type="module" src="/src/main.jsx"></script>
 </body>
 </html>
