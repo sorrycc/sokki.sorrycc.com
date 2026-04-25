@@ -1,8 +1,5 @@
-/* Sokki landing — main React app
- * Loaded as Babel JSX. Uses window.SOKKI_I18N from i18n.js
- */
-
-const { useState, useEffect, useRef, useMemo, useCallback } = React;
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { SOKKI_I18N } from './i18n.js';
 
 const STORAGE_LANG = "sokki.lang";
 
@@ -52,12 +49,16 @@ function Sparkles() {
 const SNIPPETS = {
   ":email": "sorrycc@gmail.com",
   ":sig": "— Chen Cheng / sorrycc",
-  ":now": new Date().toISOString().slice(0, 16).replace("T", " "),
+  ":now": () => new Date().toISOString().slice(0, 16).replace("T", " "),
   ":addr": "1 Infinite Loop, Cupertino, CA",
   ":shrug": "¯\\_(ツ)_/¯",
   ":dash": "—",
   ":arrow": "→",
   ":tm": "™",
+};
+const resolveSnippet = (trig) => {
+  const v = SNIPPETS[trig];
+  return typeof v === 'function' ? v() : v;
 };
 
 function LiveDemo({ t }) {
@@ -97,7 +98,7 @@ function LiveDemo({ t }) {
         k => k !== lastMatch.trig && k.startsWith(lastMatch.trig)
       );
       if (!isPrefixOfLonger) {
-        const replacement = SNIPPETS[lastMatch.trig];
+        const replacement = resolveSnippet(lastMatch.trig);
         const newBefore = before.slice(0, lastMatch.start) + replacement;
         const next = newBefore + after;
         setVal(next);
@@ -248,7 +249,7 @@ function useToast() {
 
 function App() {
   const [lang, setLang] = useState(detectInitialLang);
-  const t = window.SOKKI_I18N[lang];
+  const t = SOKKI_I18N[lang];
   const toast = useToast();
 
   useEffect(() => {
@@ -329,7 +330,7 @@ function App() {
         </section>
 
         {/* Trigger chips */}
-        <TriggerChips t={t} onCopy={(trig) => toast.show(`${trig} → ${SNIPPETS[trig] || ""}`)} />
+        <TriggerChips t={t} onCopy={(trig) => toast.show(`${trig} → ${resolveSnippet(trig) || ""}`)} />
 
         {/* Intro */}
         <section className="intro shell reveal">
@@ -445,5 +446,4 @@ function escapeHtml(s) {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
-const root = ReactDOM.createRoot(document.getElementById("root"));
-root.render(<App />);
+export default App;

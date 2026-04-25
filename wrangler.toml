@@ -1,0 +1,14 @@
+name = "sokki-landing"
+compatibility_date = "2026-04-22"
+account_id = "965e9128d01710c7d4c2034d7b539d21"
+
+routes = [
+  { pattern = "sokki.sorrycc.com", custom_domain = true },
+]
+
+[assets]
+directory = "./dist"
+not_found_handling = "single-page-application"
+
+[observability]
+enabled = true

@@ -7,14 +7,9 @@
   <meta name="description" content="A native macOS menu bar text expander. Type a trigger like :email and Sokki replaces it. macOS 14+, Apple Silicon." />
   <meta name="theme-color" content="#faf9f6" />
   <link rel="canonical" href="https://sokki.sorrycc.com/" />
-  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div id="root"></div>
-
-  <script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js" crossorigin="anonymous"></script>
-  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js" crossorigin="anonymous"></script>
-  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin="anonymous"></script>
 
   <script>
     window.SOKKI_TWEAKS = {
@@ -33,10 +28,9 @@
       document.body.dataset.stageGrid = t.showStageGrid ? "on" : "off";
       document.body.dataset.sparkles = t.showSparkles ? "on" : "off";
     }
-    document.addEventListener("DOMContentLoaded", () => applySokkiTweaks(window.SOKKI_TWEAKS));
+    applySokkiTweaks(window.SOKKI_TWEAKS);
   </script>
 
-  <script src="i18n.js"></script>
-  <script type="text/babel" src="app.jsx"></script>
+  <script type="module" src="/src/main.jsx"></script>
 </body>
 </html>

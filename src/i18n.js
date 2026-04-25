@@ -1,7 +1,7 @@
 // Bilingual strings for Sokki landing page.
 // Auto-detects browser language; toggle in nav overrides and persists.
 
-window.SOKKI_I18N = {
+export const SOKKI_I18N = {
   en: {
     locale: "en",
     htmlLang: "en",
